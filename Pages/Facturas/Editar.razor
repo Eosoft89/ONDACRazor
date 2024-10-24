@@ -130,7 +130,7 @@
 
                     <div class="col-12">
                         <div class="form-check">
-                            <InputCheckbox @bind-Value="factura.Cabecera.ExentaIVA" class="form-check-input" id="exentaIva" />
+                            <InputCheckbox @bind-Value="factura.Cabecera.ExentaIVA" class="form-check-input" id="exentaIva" @onchange="@(_ => CalculateTotal())"/>
                             <label class="form-check-label" for="exentaIva">Exenta IVA</label>
                         </div>
                     </div>
@@ -202,12 +202,21 @@
                                     <td class="text-end">@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 0.19M).ToString("C2"))</td>
                                     <td></td>
                                 </tr>
+                                <tr class="table-primary">
+                                    <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end"><strong>@(((TotalFactura ?? 0) * 1.19M).ToString("C2"))</strong></td>
+                                    <td></td>
+                                </tr>
                             }
-                            <tr class="table-primary">
-                                <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
-                                <td class="text-end"><strong>@TotalFactura?.ToString("C2")</strong></td>
-                                <td></td>
-                            </tr>
+                            else
+                            {
+                                <tr class="table-primary">
+                                    <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                                    <td class="text-end"><strong>@TotalFactura?.ToString("C2")</strong></td>
+                                    <td></td>
+                                </tr>
+                            }
+                            
                         </tfoot>
                     </table>
                 </div>
@@ -244,6 +253,7 @@
         {
             factura = await facturaRepository.GetByIdAsync(IdFactura.Value);
             selectedProveedor = factura!.Cabecera.Proveedor;
+            CalculateTotal();
         }
     }
 
@@ -318,6 +328,17 @@
     {
         detalle.SubTotalItem = detalle.CantidadItem * detalle.PrecioUnitarioItem;
         TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
+    }
+
+    private void CalculateTotal()
+    {
+        TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
+
+        if (!factura!.Cabecera.ExentaIVA)
+        {
+            TotalFactura *= 1.19M;
+        }
+
     }
 
     private void RemoveDetalle(FacturaDetalle detalle)

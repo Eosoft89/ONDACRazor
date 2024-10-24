@@ -81,19 +81,27 @@
                 <tfoot>
                     <tr class="border-top border-dark">
                         <td colspan="6" class="text-end"><strong>Neto:</strong></td>
-                        <td class="text-end">$@factura.Detalles.Sum(p => p.SubTotalItem ?? 0).ToString("C2")</td>
+                        <td class="text-end">@factura.Detalles.Sum(p => p.SubTotalItem ?? 0).ToString("C2")</td>
                     </tr>
                     @if (!factura.Cabecera.ExentaIVA)
                     {
                         <tr>
                             <td colspan="6" class="text-end"><strong>IVA (19%):</strong></td>
-                            <td class="text-end">$@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 0.19M).ToString("C2"))</td>
+                            <td class="text-end">@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 0.19M).ToString("C2"))</td>
+                        </tr>
+
+                        <tr class="table-dark">
+                            <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong>@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 1.19M).ToString("C2"))</strong></td>
                         </tr>
                     }
-                    <tr class="table-dark">
-                        <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
-                        <td class="text-end"><strong>$@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 1.19M).ToString("C2"))</strong></td>
-                    </tr>
+                    else
+                    {
+                        <tr class="table-dark">
+                            <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                            <td class="text-end"><strong>$@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0)).ToString("C2"))</strong></td>
+                        </tr>
+                    }
                 </tfoot>
             </table>
         </div>
