@@ -1,0 +1,197 @@
+﻿@page "/proveedores"
+@using ONDACTest.Data.Models
+@using ONDACTest.Data.Repositories
+@inject IProveedorRepository proveedorRepository
+@inject NavigationManager navigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Proveedores</PageTitle>
+
+<div class="row mb-4">
+    <div class="col-12 card-header bg-dark text-white">
+        <h3 class="card-title mb-0">Proveedores</h3>
+    </div>
+</div>
+
+
+@if (proveedores == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center g-3">
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" @onclick="() => CreateProveedor()">
+                        <span class="oi oi-plus me-2" aria-hidden="true"></span>
+                        Nuevo Proveedor
+                    </button>
+                </div>
+
+                <div class="col-md-auto">
+                    <div class="btn-group" role="group">
+                        <div class="btn-group" role="group">
+                            <input type="radio"
+                                   class="btn-check"
+                                   name="searchType"
+                                   id="searchRut"
+                                   checked="@searchByRut"
+                                   @onchange="() => ToggleSelection(true)"
+                                   autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="searchRut">Por RUT</label>
+
+                            <input type="radio"
+                                   class="btn-check"
+                                   name="searchType"
+                                   id="searchName"
+                                   checked="@(!searchByRut)"
+                                   @onchange="() => ToggleSelection(false)"
+                                   autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="searchName">Por Nombre</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               @bind="searchTerm"
+                               placeholder="@(searchByRut ? "Ingrese RUT..." : "Ingrese nombre...")" />
+                        <button class="btn btn-primary" @onclick="SearchProveedor">
+                            <span class="oi oi-magnifying-glass" aria-hidden="true"></span>
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="table-dark">
+                            <th scope="col" class="ps-3">#</th>
+                            <th scope="col">Id</th>
+                            <th scope="col">Nombre</th>
+                            <th scope="col">Comuna</th>
+                            <th scope="col">Ciudad</th>
+                            <th scope="col">Teléfono</th>
+                            <th scope="col">Rut</th>
+                            <th scope="col">Giro</th>
+                            <th scope="col" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (proveedores != null && proveedores.Any())
+                        {
+                            int index = 1;
+                            @foreach (var proveedor in proveedores)
+                            {
+                                <tr>
+                                    <th scope="row" class="ps-3">@index</th>
+                                    <td>@proveedor.IdProveedor</td>
+                                    <td>@proveedor.NombreProveedor</td>
+                                    <td>@proveedor.ComunaProveedor</td>
+                                    <td>@proveedor.CiudadProveedor</td>
+                                    <td>@proveedor.FonoProveedor</td>
+                                    <td>@proveedor.RutProveedor</td>
+                                    <td>@proveedor.GiroProveedor</td>
+                                    
+                                    <td>
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <button class="btn btn-outline-success btn-sm" @onclick="() => ShowProveedor(proveedor.IdProveedor)" title="Ver Proveedor">
+                                                Ver
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => EditProveedor(proveedor.IdProveedor)" title="Editar Proveedor">
+                                                Editar
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteProveedor(proveedor.IdProveedor)" title="Eliminar Proveedor">
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    No se encontraron proveedores para mostrar
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+}
+@code {
+
+    private IEnumerable<Proveedor>? proveedores;
+    private bool searchByRut = true;
+    private string searchTerm = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        proveedores = await proveedorRepository.GetAllAsync();
+    }
+
+    private void CreateProveedor()
+    {
+        navigationManager.NavigateTo("/proveedores/editar");
+    }
+
+    private void EditProveedor(int id)
+    {
+        navigationManager.NavigateTo($"/proveedores/editar/{id}");
+    }
+
+    private async Task DeleteProveedor(int id)
+    {
+        bool canBeDeleted = await proveedorRepository.CanBeDeletedAsync(id);
+
+        if (canBeDeleted)
+        {
+            await proveedorRepository.DeleteAsync(id);
+            proveedores = await proveedorRepository.GetAllAsync();   
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("sendNotification", "No se puede eliminar el Proveedor porque tiene facturas asociadas.");
+
+        }
+    }
+
+    private void ToggleSelection(bool opt)
+    {
+        searchByRut = opt;
+    }
+
+    private async Task SearchProveedor()
+    {
+        if (searchByRut)
+        {
+            proveedores = await proveedorRepository.SearchByRutAsync(searchTerm);
+        }
+        else
+        {
+            proveedores = await proveedorRepository.SearchByNameAsync(searchTerm);
+        }
+    }
+
+    private void ShowProveedor(int id)
+    {
+        navigationManager.NavigateTo($"/proveedores/ver/{id}");
+    }
+
+}

@@ -1,0 +1,126 @@
+﻿@page "/facturas/ver/{IdFactura:int?}"
+@using ONDACTest.Data.Models
+@using ONDACTest.Data.Repositories
+@inject IFacturaRepository facturaRepository
+@inject IProveedorRepository proveedorRepository
+@inject NavigationManager navigationManager
+
+<PageTitle>Factura</PageTitle>
+
+<div class="container-fluid p-4">
+    <div class="row mb-4 border-bottom pb-3">
+        <div class="col-6">
+            <h2 class="mb-1">FACTURA</h2>
+            <h3 class="text-muted">N° @IdFactura</h3>
+        </div>
+        <div class="col-6 text-end">
+            <p class="mb-1"><strong>Fecha:</strong>@factura!.Cabecera.FechaFactura.ToShortDateString()</p>
+            <p class="mb-1">
+                <strong>Estado:</strong>
+                <span class="text-primary"> @factura.Cabecera.NombreEstadoFactura</span>
+            </p>
+            <p class="mb-0"><strong>Tipo:</strong> @(factura.Cabecera.ExentaIVA ? "Exenta" : "Afecta a IVA")</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-3 bg-light">
+                <h4 class="mb-3">Datos del Proveedor</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Proveedor:</strong> @factura.NombreProveedor</p>
+                        <p class="mb-1"><strong>RUT:</strong> @proveedor!.RutProveedor</p>
+                        <p class="mb-1"><strong>Giro:</strong> @proveedor.GiroProveedor</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Comuna:</strong> @proveedor.ComunaProveedor</p>
+                        <p class="mb-1"><strong>Ciudad:</strong> @proveedor.CiudadProveedor</p>
+                        <p class="mb-1"><strong>Teléfono:</strong> @proveedor.FonoProveedor</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <p><strong>Glosa:</strong> @factura.Cabecera.GlosaFactura</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <table class="table table-striped">
+                <thead>
+                    <tr class="table-dark">
+                        <th scope="col" class="text-center">#</th>
+                        <th scope="col">Código</th>
+                        <th scope="col">Descripción</th>
+                        <th scope="col" class="text-center">Unidad</th>
+                        <th scope="col" class="text-end">Cantidad</th>
+                        <th scope="col" class="text-end">Precio Unit.</th>
+                        <th scope="col" class="text-end">Subtotal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    
+                    @foreach (var item in factura.Detalles)
+                    {
+                        <tr>
+                            <td class="text-center">@item.NroItem</td>
+                            <td>@item.CodigoItem</td>
+                            <td>@item.NombreItem</td>
+                            <td class="text-center">@item.UnidadItem</td>
+                            <td class="text-end">@item.CantidadItem?.ToString("C2")</td>
+                            <td class="text-end">@item.PrecioUnitarioItem?.ToString("C2")</td>
+                            <td class="text-end">@item.SubTotalItem?.ToString("C2")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot>
+                    <tr class="border-top border-dark">
+                        <td colspan="6" class="text-end"><strong>Neto:</strong></td>
+                        <td class="text-end">$@factura.Detalles.Sum(p => p.SubTotalItem ?? 0).ToString("C2")</td>
+                    </tr>
+                    @if (!factura.Cabecera.ExentaIVA)
+                    {
+                        <tr>
+                            <td colspan="6" class="text-end"><strong>IVA (19%):</strong></td>
+                            <td class="text-end">$@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 0.19M).ToString("C2"))</td>
+                        </tr>
+                    }
+                    <tr class="table-dark">
+                        <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                        <td class="text-end"><strong>$@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 1.19M).ToString("C2"))</strong></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+    <button class="btn btn-secondary" @onclick="NavigateBack">Volver</button>
+
+</div>
+
+@code {
+
+    [Parameter] public int? IdFactura { get; set; }
+    private Factura? factura = new();
+    private Proveedor? proveedor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IdFactura != null)
+        {
+            factura = await facturaRepository.GetByIdAsync(IdFactura.Value);
+            proveedor = await proveedorRepository.GetByIdAsync(factura!.IdProveedor);
+
+        }
+    }
+
+    private void NavigateBack()
+    {
+        navigationManager.NavigateTo("/facturas");
+    }
+}

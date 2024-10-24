@@ -1,0 +1,222 @@
+﻿@page "/facturas"
+@using ONDACTest.Data.Models
+@using ONDACTest.Data.Repositories
+@inject IFacturaRepository facturaRepository
+@inject NavigationManager navigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Facturas</PageTitle>
+
+<div class="row mb-4">
+    <div class="col-12 card-header bg-dark text-white">
+        <h3 class="card-title mb-0">Facturas</h3>
+    </div>
+</div>
+
+@if (facturas == null)
+{
+    <p><em>Cargando...</em></p>
+}
+else
+{
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center g-3">
+                <div class="col-md-auto">
+                    <button class="btn btn-primary" @onclick="() => CreateFactura()">
+                        <span class="oi oi-plus me-2" aria-hidden="true"></span>
+                        Nueva Factura
+                    </button>
+                </div>
+
+                <div class="col-md-auto">
+                    <div class="btn-group" role="group">
+                        <div class="btn-group" role="group">
+                            <input type="radio"
+                                   class="btn-check"
+                                   name="searchType"
+                                   id="searchRut"
+                                   checked="@searchById"
+                                   @onchange="() => ToggleSelection(true)"
+                                   autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="searchRut">Por ID</label>
+
+                            <input type="radio"
+                                   class="btn-check"
+                                   name="searchType"
+                                   id="searchName"
+                                   checked="@(!searchById)"
+                                   @onchange="() => ToggleSelection(false)"
+                                   autocomplete="off">
+                            <label class="btn btn-outline-secondary" for="searchName">Por Proveedor</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="input-group">
+                        <input type="text"
+                               class="form-control"
+                               @bind="searchTerm"
+                               placeholder="@(searchById ? "Ingrese ID..." : "Ingrese Proveedor...")" />
+                        <button class="btn btn-primary" @onclick="SearchFactura">
+                            <span class="oi oi-magnifying-glass" aria-hidden="true"></span>
+                            Buscar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="table-dark">
+                            <th scope="col" class="ps-3">#</th>
+                            <th scope="col">Id</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Glosa</th>
+                            <th scope="col">Proveedor</th>
+                            <th scope="col">Exenta IVA</th>
+                            <th scope="col" class="text-end">Total</th>
+                            <th scope="col" class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (facturas != null && facturas.Any())
+                        {
+                            int index = 1;
+                            @foreach (var factura in facturas)
+                            {
+                                <tr>
+                                    <th scope="row" class="ps-3">@index</th>
+                                    <td>@factura.Cabecera?.IdFactura</td>
+                                    <td>@(factura.Cabecera?.FechaFactura.ToString("dd/MM/yyyy"))</td>
+                                    <td>
+                                        <span class="badge bg-@GetEstadoClass(factura.Cabecera?.NombreEstadoFactura)">
+                                            @factura.Cabecera?.NombreEstadoFactura
+                                        </span>
+                                    </td>
+                                    <td>@factura.Cabecera?.GlosaFactura</td>
+                                    <td>@factura.NombreProveedor</td>
+                                    <td>
+                                        <span class="badge bg-@(factura.Cabecera?.ExentaIVA == true ? "info" : "secondary")">
+                                            @(factura.Cabecera?.ExentaIVA == true ? "Sí" : "No")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">$@factura.Detalles.Select(p => p.SubTotalItem).Sum()?.ToString("N0")</td>
+                                    <td>
+                                        <div class="d-flex gap-2 justify-content-center">
+                                            <button class="btn btn-outline-success btn-sm" @onclick="() => ShowFactura(factura.Cabecera!.IdFactura)" title="Ver Factura">
+                                                Ver
+                                            </button>
+                                            <button class="btn btn-outline-primary btn-sm" @onclick="() => EditFactura(factura.Cabecera!.IdFactura)" title="Editar Factura">
+                                                Editar
+                                            </button>
+                                            <button class="btn btn-outline-danger btn-sm" @onclick="() => DeleteFacturaAsync(factura.Cabecera!.IdFactura)" title="Eliminar Factura">
+                                                Eliminar
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    No se encontraron facturas para mostrar
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+}
+
+@code {
+
+    private List<Factura>? facturas;
+    private bool searchById = true;
+    private string searchTerm = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        facturas = new(await facturaRepository.GetAllAsync());
+    }
+
+    private void CreateFactura()
+    {
+        navigationManager.NavigateTo("/facturas/editar");
+    }
+
+    private void EditFactura(int id)
+    {
+        navigationManager.NavigateTo($"/facturas/editar/{id}");
+    }
+
+    private async Task DeleteFacturaAsync(int id)
+    {
+        bool canBeDeleted = await facturaRepository.CanBeDeletedAsync(id);
+
+        if (canBeDeleted)
+        {
+            await facturaRepository.DeleteAsync(id);
+            facturas = new(await facturaRepository.GetAllAsync());
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("sendNotification", "No se puede eliminar la factura por que su estado no es Borrador.");
+        }
+    }
+
+    private void ToggleSelection(bool opt)
+    {
+        searchById = opt;
+    }
+
+    private async Task SearchFactura()
+    {
+        if (searchById && int.TryParse(searchTerm, out var id))
+        {
+            Factura? factura = await facturaRepository.GetByIdAsync(id);
+            if (factura != null)
+            {
+                facturas = null;
+                facturas = new();
+                facturas.Add(factura);
+            }
+        }
+        else
+        {
+            facturas = new(await facturaRepository.SearchByProveedorAsync(searchTerm));
+        }
+    }
+
+    private void ShowFactura(int id)
+    {
+        navigationManager.NavigateTo($"/facturas/ver/{id}");
+    }
+
+    private string GetEstadoClass(string? estado)
+    {
+        return estado?.ToLower() switch
+        {
+            "aceptada con observaciones" => "warning",
+            "enviada" => "success",
+            "aceptada" => "primary",
+            "rechazada" => "danger",
+            "borrador" => "secondary",
+            _ => "primary"
+        };
+    }
+
+}

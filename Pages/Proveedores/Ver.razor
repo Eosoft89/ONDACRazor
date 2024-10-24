@@ -1,0 +1,141 @@
+﻿@page "/proveedores/ver/{IdProveedor:int?}"
+@using ONDACTest.Data.Models
+@using ONDACTest.Data.Repositories
+@inject IFacturaRepository facturaRepository
+@inject IProveedorRepository proveedorRepository
+@inject NavigationManager navigationManager
+
+<PageTitle>Proveedor</PageTitle>
+
+<div class="container-fluid p-4">
+    <div class="row mb-4 border-bottom pb-3">
+        <div class="col-6">
+            <h2 class="mb-1">PROVEEDOR</h2>
+            <h3 class="text-muted">@proveedor?.NombreProveedor</h3>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="p-3 bg-light">
+                <h4 class="mb-3">Datos del Proveedor</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>ID:</strong> @proveedor?.IdProveedor</p>
+                        <p class="mb-1"><strong>RUT:</strong> @proveedor?.RutProveedor</p>
+                        <p class="mb-1"><strong>Giro:</strong> @proveedor?.GiroProveedor</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Comuna:</strong> @proveedor?.ComunaProveedor</p>
+                        <p class="mb-1"><strong>Ciudad:</strong> @proveedor?.CiudadProveedor</p>
+                        <p class="mb-1"><strong>Teléfono:</strong> @proveedor?.FonoProveedor</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="container-fluid p-4">
+    <div class="row mb-4 border-bottom pb-3">
+        <div class="col-6">
+            <h3 class="text-muted">Facturas del proveedor</h3>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="table-dark">
+                            <th scope="col" class="ps-3">#</th>
+                            <th scope="col">Id</th>
+                            <th scope="col">Fecha</th>
+                            <th scope="col">Estado</th>
+                            <th scope="col">Glosa</th>
+                            <th scope="col">Proveedor</th>
+                            <th scope="col">Exenta IVA</th>
+                            <th scope="col" class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (facturas != null && facturas.Any())
+                        {
+                            int index = 1;
+                            @foreach (var factura in facturas)
+                            {
+                                <tr>
+                                    <th scope="row" class="ps-3">@index</th>
+                                    <td>@factura.Cabecera?.IdFactura</td>
+                                    <td>@(factura.Cabecera?.FechaFactura.ToString("dd/MM/yyyy"))</td>
+                                    <td>
+                                        <span class="badge bg-@GetEstadoClass(factura.Cabecera?.NombreEstadoFactura)">
+                                            @factura.Cabecera?.NombreEstadoFactura
+                                        </span>
+                                    </td>
+                                    <td>@factura.Cabecera?.GlosaFactura</td>
+                                    <td>@factura.NombreProveedor</td>
+                                    <td>
+                                        <span class="badge bg-@(factura.Cabecera?.ExentaIVA == true ? "info" : "secondary")">
+                                            @(factura.Cabecera?.ExentaIVA == true ? "Sí" : "No")
+                                        </span>
+                                    </td>
+                                    <td class="text-end">$@factura.Detalles.Select(p => p.SubTotalItem).Sum()?.ToString("N0")</td>
+                                </tr>
+                                index++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="9" class="text-center py-4 text-muted">
+                                    No se encontraron facturas para mostrar
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <button class="btn btn-secondary mt-4" @onclick="NavigateBack">Volver</button>
+</div>
+
+
+@code {
+
+    [Parameter] public int? IdProveedor { get; set; }
+    private List<Factura>? facturas;
+    private Proveedor? proveedor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IdProveedor != null)
+        {
+            proveedor = await proveedorRepository.GetByIdAsync(IdProveedor.Value);
+            facturas = new(await facturaRepository.GetAllByProveedorAsync(IdProveedor.Value));
+
+        }
+    }
+
+    private string GetEstadoClass(string? estado)
+    {
+        return estado?.ToLower() switch
+        {
+            "aceptada con observaciones" => "warning",
+            "enviada" => "success",
+            "aceptada" => "primary",
+            "rechazada" => "danger",
+            "borrador" => "secondary",
+            _ => "primary"
+        };
+    }
+
+    private void NavigateBack()
+    {
+        navigationManager.NavigateTo("/proveedores");
+    }
+}

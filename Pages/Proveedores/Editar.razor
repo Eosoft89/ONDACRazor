@@ -1,0 +1,116 @@
+﻿@page "/proveedores/editar/{IdProveedor:int?}"
+@inject NavigationManager navigationManager
+@using ONDACTest.Data.Repositories
+@inject IProveedorRepository proveedorRepository
+@using ONDACTest.Data.Models
+
+<PageTitle>Proveedores</PageTitle>
+
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h3 class="card-title mb-0">@((IdProveedor == null) ? "Nuevo Proveedor" : "Editar Proveedor")</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="proveedor" OnValidSubmit="SaveProveedor">
+                        <DataAnnotationsValidator />
+                        <div class="alert alert-danger" role="alert">
+                            <ValidationSummary />
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor!.NombreProveedor" class="form-control" id="nombreProveedor" placeholder="Nombre" />
+                                    <label for="nombreProveedor">Nombre</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor.ComunaProveedor" class="form-control" id="comunaProveedor" placeholder="Comuna" />
+                                    <label for="comunaProveedor">Comuna</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor.CiudadProveedor" class="form-control" id="ciudadProveedor" placeholder="Ciudad" />
+                                    <label for="ciudadProveedor">Ciudad</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor.FonoProveedor" class="form-control" id="fonoProveedor" placeholder="Teléfono" />
+                                    <label for="fonoProveedor">Teléfono</label>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor.RutProveedor" class="form-control" id="rutProveedor" placeholder="RUT" />
+                                    <label for="rutProveedor">RUT</label>
+                                </div>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <div class="form-floating">
+                                    <InputText @bind-Value="proveedor.GiroProveedor" class="form-control" id="giroProveedor" placeholder="Giro" />
+                                    <label for="giroProveedor">Giro</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mt-4">
+                            <div class="col-3 d-grid">
+                                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">Volver</button>
+                            </div>
+                            <div class="col-3 d-grid">
+                                <button class="btn btn-primary" type="submit">Guardar Proveedor</button>
+                            </div>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+</div>
+
+@code {
+
+    [Parameter] public int? IdProveedor { get; set; }
+    private Proveedor? proveedor = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IdProveedor != null)
+        {
+            proveedor = await proveedorRepository.GetByIdAsync(IdProveedor.Value);
+        }
+    }
+
+    private async Task SaveProveedor()
+    {
+        if(IdProveedor == null)
+        {
+            await proveedorRepository.AddAsync(proveedor!);
+        }
+        else
+        {
+            await proveedorRepository.UpdateAsync(proveedor!);
+        }
+
+        navigationManager.NavigateTo("/proveedores");
+
+    }
+
+    private void NavigateBack()
+    {
+        navigationManager.NavigateTo("/proveedores");
+    }
+}

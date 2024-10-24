@@ -1,0 +1,335 @@
+﻿@page "/facturas/editar/{IdFactura:int?}"
+@using ONDACTest.Data.Models
+@using ONDACTest.Data.Repositories
+@inject IFacturaRepository facturaRepository
+@inject IProveedorRepository proveedorRepository
+@inject NavigationManager navigationManager
+@inject IJSRuntime JS
+
+<PageTitle>Facturas</PageTitle>
+
+<div class="container-fluid p-4">
+    <div class="row mb-4">
+        <div class="col-12 card-header bg-dark text-white">
+            <h3 class="card-title mb-0">@((IdFactura == null) ? "Nueva Factura" : "Editar Factura")</h3>
+        </div>
+    </div>
+
+    @if (IdFactura == null)
+    {
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Búsqueda de Proveedor</h5>
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" checked="@searchById"
+                                   @onchange="() => ToggleSelection(true)">
+                            <label class="form-check-label">Por ID</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" checked="@(!searchById)"
+                                   @onchange="() => ToggleSelection(false)">
+                            <label class="form-check-label">Por nombre</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="input-group">
+                            <input class="form-control" type="text" @bind="searchTerm"
+                                   placeholder="Buscar proveedor..." />
+                            <button class="btn btn-primary" @onclick="SearchProveedores">
+                                <span class="oi oi-magnifying-glass"></span> Buscar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                @if (selectedProveedor != null)
+                {
+                    <div class="alert alert-info mt-3 mb-0">
+                        <strong>Proveedor seleccionado:</strong> @selectedProveedor.NombreProveedor
+                    </div>
+                }
+
+                @if (proveedores != null && proveedores.Any())
+                {
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Id</th>
+                                    <th>Nombre</th>
+                                    <th>Rut</th>
+                                    <th width="150">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var proveedor in proveedores)
+                                {
+                                    <tr>
+                                        <td>@proveedor.IdProveedor</td>
+                                        <td>@proveedor.NombreProveedor</td>
+                                        <td>@proveedor.RutProveedor</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-primary"
+                                                    @onclick="() => SelectProveedor(proveedor)">
+                                                <span class="oi oi-check"></span> Seleccionar
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <EditForm Model="@factura" OnValidSubmit="SaveFactura">
+        <DataAnnotationsValidator />
+        <div class="alert alert-danger" role="alert">
+            <ValidationSummary />
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title mb-4">Datos de la Factura</h5>
+
+                @if (IdFactura != null)
+                {
+                    <div class="row mb-3">
+                        <label class="col-md-2 col-form-label">Proveedor:</label>
+                        <div class="col-md-10">
+                            <p class="form-control-plaintext"><strong>@factura?.NombreProveedor</strong></p>
+                        </div>
+                    </div>
+                }
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <InputDate @bind-Value="factura!.Cabecera.FechaFactura" class="form-control" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <InputSelect @bind-Value="factura.Cabecera.IdEstadoFactura" class="form-select">
+                            <option value="1">Borrador</option>
+                            <option value="2">Enviada</option>
+                            <option value="3">Aceptada</option>
+                            <option value="4">Aceptada con observaciones</option>
+                            <option value="5">Rechazada</option>
+                        </InputSelect>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Glosa</label>
+                        <InputTextArea @bind-Value="factura.Cabecera.GlosaFactura" class="form-control" rows="3" />
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <InputCheckbox @bind-Value="factura.Cabecera.ExentaIVA" class="form-check-input" id="exentaIva" />
+                            <label class="form-check-label" for="exentaIva">Exenta IVA</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="card-title mb-0">Detalle de Factura</h5>
+                    <button type="button" class="btn btn-success" @onclick="AddDetalle">
+                        <span class="oi oi-plus"></span> Agregar Ítem
+                    </button>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px">Item</th>
+                                <th>Código</th>
+                                <th>Nombre</th>
+                                <th>Unidad</th>
+                                <th style="width: 120px">Cantidad</th>
+                                <th style="width: 150px">Precio Unit.</th>
+                                <th style="width: 150px">Subtotal</th>
+                                <th style="width: 80px"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var detalle in factura.Detalles)
+                            {
+                                <tr>
+                                    <td class="text-center">@detalle.NroItem</td>
+                                    <td><InputText class="form-control form-control-sm" @bind-Value="detalle.CodigoItem" /></td>
+                                    <td><InputText class="form-control form-control-sm" @bind-Value="detalle.NombreItem" /></td>
+                                    <td><InputText class="form-control form-control-sm" @bind-Value="detalle.UnidadItem" /></td>
+                                    <td>
+                                        <input class="form-control form-control-sm text-end" type="number"
+                                               @bind="detalle.CantidadItem" @bind:event="oninput"
+                                               @onchange="@(_ => CalculateSubTotal(detalle))" />
+                                    </td>
+                                    <td>
+                                        <input class="form-control form-control-sm text-end" type="number"
+                                               @bind="detalle.PrecioUnitarioItem" @bind:event="oninput"
+                                               @onchange="@(_ => CalculateSubTotal(detalle))" />
+                                    </td>
+                                    <td class="text-end">@detalle.SubTotalItem?.ToString("C2")</td>
+                                    <td class="text-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                                @onclick="() => RemoveDetalle(detalle)">
+                                            <span class="oi oi-trash"></span>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="6" class="text-end"><strong>Neto:</strong></td>
+                                <td class="text-end">@(factura.Detalles.Sum(p => p.SubTotalItem ?? 0).ToString("C2"))</td>
+                                <td></td>
+                            </tr>
+                            @if (!factura.Cabecera.ExentaIVA)
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-end"><strong>IVA (19%):</strong></td>
+                                    <td class="text-end">@((factura.Detalles.Sum(p => p.SubTotalItem ?? 0) * 0.19M).ToString("C2"))</td>
+                                    <td></td>
+                                </tr>
+                            }
+                            <tr class="table-primary">
+                                <td colspan="6" class="text-end"><strong>TOTAL:</strong></td>
+                                <td class="text-end"><strong>@TotalFactura?.ToString("C2")</strong></td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-6">
+                <button type="button" class="btn btn-secondary" @onclick="NavigateBack">Volver</button>
+            </div>
+            <div class="col-6 text-end">
+                <button class="btn btn-primary" type="submit">
+                    Guardar Factura
+                </button>
+            </div>
+        </div>
+    </EditForm>
+
+</div>
+
+@code {
+
+    [Parameter] public int? IdFactura { get; set; }
+    private Factura? factura = new();
+    private IEnumerable<Proveedor>? proveedores;
+    private bool searchById = true;
+    private string? searchTerm;
+    private Proveedor? selectedProveedor;
+    private decimal? TotalFactura;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (IdFactura != null)
+        {
+            factura = await facturaRepository.GetByIdAsync(IdFactura.Value);
+            selectedProveedor = factura!.Cabecera.Proveedor;
+        }
+    }
+
+    private void AddDetalle()
+    {
+        factura?.Detalles.Add(new FacturaDetalle()
+        {
+            NroItem = factura.Detalles.Count + 1
+        });
+    }
+
+    private async Task SaveFactura()
+    {
+        List<string> validations = ValidateForm(factura!);
+
+        if(validations.Count == 0)
+        {
+            if (IdFactura == null) 
+                await facturaRepository.AddAsync(factura!);
+            else 
+                await facturaRepository.UpdateAsync(factura!);
+
+            navigationManager.NavigateTo("/facturas");
+        }
+        else
+        {
+            await JS.InvokeVoidAsync("sendNotification", string.Join("\n", validations));
+        }
+    }
+
+    private async Task SearchProveedores()
+    {
+        if (searchById && int.TryParse(searchTerm, out var id))
+        {
+            Proveedor? proveedor = await proveedorRepository.GetByIdAsync(id);
+            if (proveedor != null)
+            {
+                SelectProveedor(proveedor);
+            }
+        }
+        else
+        {
+            proveedores = await proveedorRepository.SearchByNameAsync(searchTerm!);
+        }
+    }
+
+    private void ToggleSelection(bool opt)
+    {
+        searchById = opt;
+    }
+
+    private void SelectProveedor(Proveedor proveedor)
+    {
+        selectedProveedor = proveedor;
+        factura!.Cabecera.IdProveedor = proveedor.IdProveedor;
+        proveedores = null;
+    }
+
+    private List<string> ValidateForm(Factura factura)
+    {
+
+        List<string> validations = new();
+
+        if (factura.Cabecera.GlosaFactura == "" || factura.Cabecera.GlosaFactura == null) validations.Add("La Glosa es requerida");
+        if (selectedProveedor == null) validations.Add("Por favor seleccione un proveedor");
+        if (factura.Detalles.Any(x => x.CodigoItem == "" || x.CodigoItem == null)) validations.Add("El campo Código Item es requerido");
+
+        return validations;
+    }
+
+    private void CalculateSubTotal(FacturaDetalle detalle)
+    {
+        detalle.SubTotalItem = detalle.CantidadItem * detalle.PrecioUnitarioItem;
+        TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
+    }
+
+    private void RemoveDetalle(FacturaDetalle detalle)
+    {
+        int numIntem = 0;
+        factura!.Detalles.Remove(detalle);
+        factura.Detalles.ForEach(x => x.NroItem = numIntem+=1);
+        TotalFactura = factura.Detalles.Sum(x => x.SubTotalItem);
+    }
+
+    private void NavigateBack()
+    {
+        navigationManager.NavigateTo("/facturas");
+    }
+ }
