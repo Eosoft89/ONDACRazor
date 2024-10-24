@@ -111,7 +111,7 @@ else
                                         </span>
                                     </td>
                                     <td class="text-end">$@factura.Detalles.Select(p => p.SubTotalItem).Sum()?.ToString("N0")</td>
-                                    @if (factura.Cabecera!.ExentaIVA)
+                                    @if (!factura.Cabecera!.ExentaIVA)
                                     {
                                         <td class="text-end">$@(((factura.Detalles.Select(p => p.SubTotalItem).Sum() ?? 0) * 0.19M).ToString("N0"))</td>
                                         <td class="text-end">$@(((factura.Detalles.Select(p => p.SubTotalItem).Sum() ?? 0) * 1.19M).ToString("N0"))</td>

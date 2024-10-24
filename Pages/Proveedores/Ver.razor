@@ -57,6 +57,8 @@
                             <th scope="col">Glosa</th>
                             <th scope="col">Proveedor</th>
                             <th scope="col">Exenta IVA</th>
+                            <th scope="col" class="text-end">Neto</th>
+                            <th scope="col" class="text-end">IVA</th>
                             <th scope="col" class="text-end">Total</th>
                         </tr>
                     </thead>
@@ -83,6 +85,17 @@
                                         </span>
                                     </td>
                                     <td class="text-end">$@factura.Detalles.Select(p => p.SubTotalItem).Sum()?.ToString("N0")</td>
+                                    @if (!factura.Cabecera!.ExentaIVA)
+                                    {
+                                        <td class="text-end">$@(((factura.Detalles.Select(p => p.SubTotalItem).Sum() ?? 0) * 0.19M).ToString("N0"))</td>
+                                        <td class="text-end">$@(((factura.Detalles.Select(p => p.SubTotalItem).Sum() ?? 0) * 1.19M).ToString("N0"))</td>
+                                    }
+                                    else
+                                    {
+                                        <td class="text-end">$0.000</td>
+                                        <td class="text-end">$@factura.Detalles.Select(p => p.SubTotalItem).Sum()?.ToString("N0")</td>
+                                    }
+                                
                                 </tr>
                                 index++;
                             }

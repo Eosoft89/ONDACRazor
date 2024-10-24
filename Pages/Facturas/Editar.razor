@@ -130,7 +130,7 @@
 
                     <div class="col-12">
                         <div class="form-check">
-                            <InputCheckbox @bind-Value="factura.Cabecera.ExentaIVA" class="form-check-input" id="exentaIva" @onchange="@(_ => CalculateTotal())"/>
+                            <InputCheckbox @bind-Value="factura.Cabecera.ExentaIVA" class="form-check-input" id="exentaIva"/>
                             <label class="form-check-label" for="exentaIva">Exenta IVA</label>
                         </div>
                     </div>
@@ -253,7 +253,7 @@
         {
             factura = await facturaRepository.GetByIdAsync(IdFactura.Value);
             selectedProveedor = factura!.Cabecera.Proveedor;
-            CalculateTotal();
+            TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
         }
     }
 
@@ -328,17 +328,6 @@
     {
         detalle.SubTotalItem = detalle.CantidadItem * detalle.PrecioUnitarioItem;
         TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
-    }
-
-    private void CalculateTotal()
-    {
-        TotalFactura = factura!.Detalles.Sum(x => x.SubTotalItem);
-
-        if (!factura!.Cabecera.ExentaIVA)
-        {
-            TotalFactura *= 1.19M;
-        }
-
     }
 
     private void RemoveDetalle(FacturaDetalle detalle)
